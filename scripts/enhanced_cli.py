@@ -15,7 +15,7 @@ HISTORY_DIR = Path.home() / ".openclaw" / "workspace" / "memory" / "multi-model-
 
 PRESETS = {
     "quick": {"models": ["bailian/qwen3.5-plus", "openai-codex/gpt-5.4"], "mode": "consensus", "rounds": 1},
-    "deep": {"models": ["bailian/qwen3.5-plus", "bailian/kimi-k2.5", "openai-codex/gpt-5.4"], "mode": "comprehensive", "rounds": "adaptive", "adaptive_threshold": 0.8},
+    "deep": {"models": ["bailian/qwen3.5-plus", "bailian/kimi-k2.5", "bailian/glm-5", "openai-codex/gpt-5.4"], "mode": "comprehensive", "rounds": "adaptive", "adaptive_threshold": 0.8},
     "code": {"models": ["bailian/qwen3.5-plus", "openai-codex/gpt-5.4"], "mode": "comprehensive", "rounds": 1},
     "strategy": {"models": ["bailian/qwen3.5-plus", "bailian/kimi-k2.5", "openai-codex/gpt-5.4"], "mode": "divergent", "rounds": 1},
     "creative": {"models": ["bailian/kimi-k2.5", "bailian/glm-5", "bailian/MiniMax-M2.5"], "mode": "comprehensive", "rounds": 1}

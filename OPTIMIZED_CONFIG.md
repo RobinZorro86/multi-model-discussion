@@ -1,6 +1,6 @@
 # Multi-Model Discussion - Optimized Configuration
 
-## Deep Mode (Optimized)
+## Deep Mode (Optimized with GLM-5)
 
 ```json
 {
@@ -8,6 +8,7 @@
     "models": [
       "bailian/qwen3.5-plus",
       "bailian/kimi-k2.5",
+      "bailian/glm-5",
       "openai-codex/gpt-5.4"
     ],
     "summarizer": "openai-codex/gpt-5.4",
@@ -17,9 +18,10 @@
     "timeout_per_model": {
       "bailian/qwen3.5-plus": 25,
       "bailian/kimi-k2.5": 35,
+      "bailian/glm-5": 30,
       "openai-codex/gpt-5.4": 20
     },
-    "total_timeout": 90,
+    "total_timeout": 120,
     "progress_updates": true,
     "cache": {
       "enabled": true,
@@ -37,10 +39,11 @@
 
 ## Key Optimizations
 
-### 1. Model Simplification (5 → 3)
-- **Removed**: MiniMax-M2.5, glm-5
-- **Kept**: qwen3.5-plus (reasoning), kimi-k2.5 (long context), gpt-5.4 (synthesis)
-- **Savings**: 40% cost reduction
+### 1. Model Configuration (v0.8.5)
+- **Deep Mode**: 4 models (qwen3.5 + kimi + glm-5 + gpt5)
+- **Other Modes**: 3 models (qwen3.5 + kimi + gpt5)
+- **GLM-5 Added**: General purpose reasoning for deep analysis
+- **Timeout**: glm-5 uses 30s timeout
 
 ### 2. Refined Timeout
 | Model | Timeout | Reason |
@@ -82,8 +85,9 @@
 | Configuration | Avg Tokens | Cost |
 |--------------|------------|------|
 | Original (5 models, 2 rounds) | ~15,000 | ¥0.60 |
-| Optimized (3 models, 1.3 rounds) | ~8,500 | ¥0.35 |
-| **Savings** | **~43%** | **~42%** |
+| Optimized v0.8.0 (3 models, 1.3 rounds) | ~8,500 | ¥0.35 |
+| Optimized v0.8.5 (4 models deep, 1.3 rounds) | ~10,200 | ¥0.42 |
+| **Savings vs Original** | **~32%** | **~30%** |
 
 ## Usage
 
