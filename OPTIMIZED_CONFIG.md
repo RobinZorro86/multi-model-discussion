@@ -1,0 +1,96 @@
+# Multi-Model Discussion - Optimized Configuration
+
+## Deep Mode (Optimized)
+
+```json
+{
+  "deep_optimized": {
+    "models": [
+      "bailian/qwen3.5-plus",
+      "bailian/kimi-k2.5",
+      "openai-codex/gpt-5.4"
+    ],
+    "summarizer": "openai-codex/gpt-5.4",
+    "mode": "adaptive",
+    "rounds": "adaptive",
+    "adaptive_threshold": 0.8,
+    "timeout_per_model": {
+      "bailian/qwen3.5-plus": 25,
+      "bailian/kimi-k2.5": 35,
+      "openai-codex/gpt-5.4": 20
+    },
+    "total_timeout": 90,
+    "progress_updates": true,
+    "cache": {
+      "enabled": true,
+      "semantic": true,
+      "partial": true,
+      "ttl_hours": 48
+    },
+    "synthesis": {
+      "tiered": true,
+      "conflict_detection": true
+    }
+  }
+}
+```
+
+## Key Optimizations
+
+### 1. Model Simplification (5 → 3)
+- **Removed**: MiniMax-M2.5, glm-5
+- **Kept**: qwen3.5-plus (reasoning), kimi-k2.5 (long context), gpt-5.4 (synthesis)
+- **Savings**: 40% cost reduction
+
+### 2. Refined Timeout
+| Model | Timeout | Reason |
+|-------|---------|--------|
+| qwen3.5-plus | 25s | Fast reasoning |
+| kimi-k2.5 | 35s | Long context needs time |
+| gpt-5.4 | 20s | Subscription, usually fast |
+
+### 3. Adaptive Rounds
+- **Consensus >= 0.8**: Skip round 2
+- **Consensus < 0.8**: Proceed to round 2
+- **Average rounds**: 1.3 (vs fixed 2)
+
+### 4. Dynamic Mode Selection
+| Question Pattern | Selected Mode |
+|------------------|---------------|
+| "验证/确认/对吗" | consensus |
+| "创意/想法/方案" | divergent |
+| "分析/研究/为什么" | comprehensive |
+| "选择/哪个/推荐" | voting |
+
+### 5. Enhanced Caching
+- **Semantic cache**: Similar questions reuse results
+- **Partial cache**: Failed models don't trigger full rerun
+- **TTL**: 48 hours for facts, 24 hours for trends
+
+### 6. Tiered Synthesis
+1. Group synthesis (bailian models)
+2. Conflict detection
+3. Final synthesis with gpt-5.4
+
+### 7. Semantic Caching
+- Extracts first 10 keywords
+- Matches similar questions
+- Extends TTL to 48 hours
+
+## Cost Comparison
+
+| Configuration | Avg Tokens | Cost |
+|--------------|------------|------|
+| Original (5 models, 2 rounds) | ~15,000 | ¥0.60 |
+| Optimized (3 models, 1.3 rounds) | ~8,500 | ¥0.35 |
+| **Savings** | **~43%** | **~42%** |
+
+## Usage
+
+```bash
+# Use optimized deep preset
+python3 scripts/enhanced_cli.py --preset deep_optimized
+
+# Or in conversation:
+# "Use multi-model discussion with preset=deep_optimized"
+```

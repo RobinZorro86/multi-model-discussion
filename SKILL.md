@@ -42,19 +42,28 @@ Default configuration:
   "summarizer": "gpt5",
   "mode": "consensus",
   "rounds": 1,
-  "timeout_per_model": 30,
+  "timeout_per_model": {
+    "qwen3.5-plus": 25,
+    "kimi-k2.5": 35,
+    "gpt5": 20
+  },
   "total_timeout": 90,
   "progress_updates": true
 }
 ```
 
+Optimized timeout settings per model:
+- **qwen3.5-plus**: 25s (fast reasoning)
+- **kimi-k2.5**: 35s (long context needs more time)
+- **gpt5**: 20s (subscription, usually fast)
+
 ### Parameters
 
 - `models`: Array of model identifiers to participate
 - `summarizer`: Model used for final synthesis
-- `mode`: Synthesis mode (consensus/divergent/comprehensive/voting)
-- `rounds`: Number of discussion rounds (1-3)
-- `timeout_per_model`: Timeout per model in seconds
+- `mode`: Synthesis mode (consensus/divergent/comprehensive/voting, or "adaptive" for auto-selection)
+- `rounds`: Number of discussion rounds (1-3, or "adaptive" for auto-detection)
+- `timeout_per_model`: Timeout per model in seconds (can be dict for per-model timeouts)
 - `total_timeout`: Total timeout for all models
 - `progress_updates`: Whether to show progress updates
 
@@ -64,6 +73,16 @@ Default configuration:
 - **divergent**: Highlight differences and unique perspectives
 - **comprehensive**: Include all perspectives with organization
 - **voting**: Rank perspectives by frequency/quality
+- **adaptive**: Auto-select based on question type
+
+### Adaptive Mode Selection
+
+| Question Pattern | Auto-Selected Mode |
+|------------------|-------------------|
+| "验证..." / "确认..." / "对吗" | consensus |
+| "创意..." / "想法..." / "方案" | divergent |
+| "分析..." / "研究..." / "为什么" | comprehensive |
+| "选择..." / "哪个..." / "推荐" | voting |
 
 ## Usage
 
@@ -111,14 +130,34 @@ for model in config['models']:
 - If minimum models (2) succeed: Proceed to synthesis
 - If fewer than 2 succeed: Report failure
 
-### Step 6: Multi-Round Discussion (if rounds > 1)
-For each additional round:
+### Step 6: Multi-Round Discussion (Adaptive)
+For adaptive rounds:
+1. After first round, calculate consensus score (0-1)
+2. If consensus >= adaptive_threshold (default 0.8), skip additional rounds
+3. If consensus < threshold, proceed with round 2
+4. Repeat for round 3 if needed
+
+Consensus calculation:
+```python
+consensus_score = similarity_matrix(responses).mean()
+```
+
+For fixed rounds (if rounds is number):
 1. Build context from previous round responses
 2. Send contextualized question to all models
 3. Collect new responses
 
-### Step 7: Synthesize Results
-Use the summarizer model with appropriate synthesis prompt.
+### Step 7: Synthesize Results (Tiered Synthesis)
+
+For tiered synthesis (when enabled):
+1. **Group Synthesis**: 
+   - Group 1 (bailian models): Synthesize bailian responses first
+   - Group 2 (openai models): Synthesize openai responses
+2. **Conflict Detection**: Identify disagreements between groups
+3. **Final Synthesis**: Combine group results with conflict resolution
+
+For standard synthesis:
+- Use the summarizer model with appropriate synthesis prompt
 
 ### Step 8: Generate Output
 Format results in structured markdown.
@@ -217,24 +256,39 @@ Available response: {single_response}
    - Use `consensus` for validation tasks
    - Use `divergent` for creative exploration
    - Use `comprehensive` for research tasks
+   - Use `adaptive` for automatic mode selection
+5. **Cache Strategy**:
+   - Enable semantic cache for similar questions
+   - Use partial cache when individual models fail
+   - Set TTL based on question type (facts: 48h, trends: 24h)
    - Use `voting` for decision-making
 5. **Multi-Round**: Enable for complex topics needing refinement
 6. **Cost Awareness**: Each discussion costs ~12k tokens
 
-## Cost Estimation
+## Cost Estimation (Optimized)
 
-Formula:
+Formula (3 models):
 ```
 Input tokens: 500 × n_models
 Output tokens: 1000 × n_models  
 Synthesis: 2000 + 1000
 Total: ~500 + 1000×n + 3000 tokens
 
-Example (3 models):
+Example (3 models, optimized):
 - Input: 500 × 3 = 1,500
 - Output: 1,000 × 3 = 3,000
 - Synthesis: 3,000
 - Total: ~7,500 tokens (~¥0.30)
+
+With adaptive rounds (avg 1.3 rounds):
+- Simple questions: 7,500 tokens (1 round)
+- Complex questions: ~10,000 tokens (2 rounds)
+- Average: ~8,500 tokens (~¥0.35)
+
+Before optimization (5 models, 2 rounds fixed):
+- Total: ~15,000 tokens (~¥0.60)
+
+Savings: ~40% cost reduction
 ```
 
 ## Scripts

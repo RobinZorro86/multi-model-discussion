@@ -15,7 +15,7 @@ HISTORY_DIR = Path.home() / ".openclaw" / "workspace" / "memory" / "multi-model-
 
 PRESETS = {
     "quick": {"models": ["bailian/qwen3.5-plus", "openai-codex/gpt-5.4"], "mode": "consensus", "rounds": 1},
-    "deep": {"models": ["bailian/qwen3.5-plus", "bailian/kimi-k2.5", "bailian/glm-5", "bailian/MiniMax-M2.5", "openai-codex/gpt-5.4"], "mode": "comprehensive", "rounds": 2},
+    "deep": {"models": ["bailian/qwen3.5-plus", "bailian/kimi-k2.5", "openai-codex/gpt-5.4"], "mode": "comprehensive", "rounds": "adaptive", "adaptive_threshold": 0.8},
     "code": {"models": ["bailian/qwen3.5-plus", "openai-codex/gpt-5.4"], "mode": "comprehensive", "rounds": 1},
     "strategy": {"models": ["bailian/qwen3.5-plus", "bailian/kimi-k2.5", "openai-codex/gpt-5.4"], "mode": "divergent", "rounds": 1},
     "creative": {"models": ["bailian/kimi-k2.5", "bailian/glm-5", "bailian/MiniMax-M2.5"], "mode": "comprehensive", "rounds": 1}
@@ -68,8 +68,38 @@ def cleanup_history(keep_days=30, keep_count=50, dry_run=False):
     print(f"🧹 {action} {len(removed)} files, kept {len(remaining) - len(removed) + len([f for f in remaining if f not in remaining[keep_count:]])}")
 
 def get_cache_key(question, models, mode, rounds):
+    """Generate cache key for exact match"""
     content = f"{question}|{','.join(sorted(models))}|{mode}|{rounds}"
     return hashlib.md5(content.encode()).hexdigest()
+
+def get_semantic_cache_key(question):
+    """Generate semantic cache key using simplified question"""
+    # Remove punctuation, lowercase, extract keywords
+    simplified = ''.join(c.lower() for c in question if c.isalnum() or c.isspace())
+    # Extract first 10 words as key
+    words = simplified.split()[:10]
+    return hashlib.md5(' '.join(words).encode()).hexdigest()
+
+def find_semantic_cache(question, ttl_hours=48):
+    """Find semantically similar cached discussions"""
+    if not CACHE_DIR.exists():
+        return None
+    
+    semantic_key = get_semantic_cache_key(question)
+    
+    # Check all cache files for semantic similarity
+    for cache_file in CACHE_DIR.glob("*.json"):
+        try:
+            data = json.loads(cache_file.read_text())
+            if time.time() - data.get("timestamp", 0) > ttl_hours * 3600:
+                continue
+            
+            # Check if semantic key matches
+            if data.get("semantic_key") == semantic_key:
+                return data.get("result")
+        except:
+            continue
+    return None
 
 def get_cache(cache_key, ttl_hours=24):
     if not CACHE_DIR.exists():
@@ -84,10 +114,15 @@ def get_cache(cache_key, ttl_hours=24):
             pass
     return None
 
-def save_cache(cache_key, result):
+def save_cache(cache_key, result, question=None):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_file = CACHE_DIR / f"{cache_key}.json"
-    cache_file.write_text(json.dumps({"timestamp": time.time(), "result": result}))
+    data = {
+        "timestamp": time.time(),
+        "result": result,
+        "semantic_key": get_semantic_cache_key(question) if question else None
+    }
+    cache_file.write_text(json.dumps(data))
 
 if __name__ == "__main__":
     import argparse
